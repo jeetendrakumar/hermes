@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="
+	http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.1.xsd
+	http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+	<description>Example job to get you started. It provides a skeleton for a typical batch application.</description>
+	<batch:job id="rfgJob">
+		<!-- batch:step id="mergeAgentFilesStep1" next="agentProcessingStep2">			
+			<batch:tasklet>
+				<batch:chunk reader="multiResourceReader" writer="flatFileItemWriter" commit-interval="1" />
+			</batch:tasklet>
+		</batch:step-->
+		<batch:step id="agentProcessingStep2" next="agentPhoneProcessingStep3">			
+			<batch:tasklet transaction-manager="transactionManager" start-limit="100">
+				<batch:chunk reader="multiResourceReader" writer="agentItemWriter" commit-interval="50" />
+			</batch:tasklet>
+		</batch:step>
+		<batch:step id="agentPhoneProcessingStep3">			
+			<batch:tasklet transaction-manager="transactionManager" start-limit="100">
+				<batch:chunk reader="agentPhoneFileReader" writer="agentPhoneItemWriter" commit-interval="50" />
+			</batch:tasklet>
+		</batch:step>
+	</batch:job> 
+	
+	<bean id="agent" class="com.dotloop.model.Agent" />
+	
+	<bean id="multiResourceReader" class=" org.springframework.batch.item.file.MultiResourceItemReader">
+		<property name="resources" value="file:rfg/*/Agent-*.txt" />
+		<property name="delegate" ref="agentFileReader" />
+	</bean>
+	
+	<bean id="agentFileReader" class="org.springframework.batch.item.file.FlatFileItemReader" scope="step">
+		<!-- property name="resource" value="file:Agent-All.txt" /-->
+         <!-- Skip the first line of the file because this is the header that defines the fields -->
+        <property name="linesToSkip" value="1" />
+        
+		<property name="lineMapper">
+		    <bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+			<property name="lineTokenizer">
+				<bean class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+					<property name="names" value="agentGuid,officeGuid,brand,agentKey,saId,,,,,,,,,,,,," />
+					<property name="delimiter" value="|"/>
+				</bean>
+			</property>
+			<property name="fieldSetMapper">
+				<bean class="com.dotloop.mapper.AgentFieldSetMapper" />
+ 
+				 <!-- if no data type conversion, use BeanWrapperFieldSetMapper to map by name
+				<bean class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper">
+					<property name="prototypeBeanName" value="report" />
+				</bean>
+				 -->
+			</property>
+		    </bean>
+		</property>
+	</bean>
+	
+	<bean id="agentPhoneFileReader" class="org.springframework.batch.item.file.FlatFileItemReader" scope="step">
+		<property name="resource" value="file:rfg/C21/AgentPhone.txt" />
+         <!-- Skip the first line of the file because this is the header that defines the fields -->
+        <property name="linesToSkip" value="1" />
+        
+		<property name="lineMapper">
+		    <bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+			<property name="lineTokenizer">
+				<bean class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+					<property name="names" value="agentGuid,phoneType,phoneNo,extOrPin," />
+					<property name="delimiter" value="|"/>
+				</bean>
+			</property>
+			<property name="fieldSetMapper">
+				<bean class="com.dotloop.mapper.AgentPhoneFieldSetMapper" />
+ 
+				 <!-- if no data type conversion, use BeanWrapperFieldSetMapper to map by name
+				<bean class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper">
+					<property name="prototypeBeanName" value="report" />
+				</bean>
+				 -->
+			</property>
+		    </bean>
+		</property>
+	</bean>
+
+	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <property name="dataSource" ref="dataSource" />
+    </bean>	
+    
+    
+      <!-- bean id="flatFileItemReader" class="org.springframework.batch.item.file.FlatFileItemReader">
+  	<property name="linesToSkip" value="1" />
+	<property name="lineMapper">
+	  <bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+		<property name="lineTokenizer">
+		    <bean class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+				<property name="names" value="agentGuid,officeGuid,brand,agentKey,saId,salutation,firstName,lastName,suffix,familiarName,printedName,titleCode,ISOLanguageCode,ISOLanguageName,LastUpdatedate,sourceAgentIdentifier,associateType,showOnInternet" />
+				<property name="delimiter" value="|"/>
+		    </bean>
+		</property>
+		<property name="fieldSetMapper">
+		    <bean class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper">
+				<property name="prototypeBeanName" value="agent" />
+		    </bean>
+		</property>
+	  </bean>
+	</property>
+  </bean>
+  
+  <bean id="flatFileItemWriter" class="org.springframework.batch.item.file.FlatFileItemWriter">
+	<property name="resource" value="file:Agent-All.txt" />
+	<property name="appendAllowed" value="true" />
+	<property name="lineAggregator">
+	  <bean class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+		<property name="delimiter" value="|" />
+		<property name="fieldExtractor">
+		  <bean	class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+			<property name="names" value="agentGuid,officeGuid,brand,agentKey,saId,salutation,firstName,lastName,suffix,familiarName,printedName,titleCode,ISOLanguageCode,ISOLanguageName,LastUpdatedate,sourceAgentIdentifier,associateType,showOnInternet" />
+		  </bean>
+		</property>
+	  </bean>
+	</property>
+  </bean-->
+</beans>
